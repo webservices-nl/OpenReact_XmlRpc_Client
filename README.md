@@ -14,7 +14,7 @@ To use this client, include our autoloader, register it and create a client inst
     $client = new OpenReact_XmlRpc_Client('https://URL.TO/ENDPOINT');
     var_dump($client->call('system.listMethods'));
 
-Or, to use our client with multiple endpoints you can use our ServicesClient, which wraps the client:
+Or, to use our client with multiple endpoints (and authentication) you can use our ServicesClient, which wraps the client:
 
     require('/PATH/TO/OpenReact_XmlRpc_Client/library/OpenReact/Autoload.php');
     OpenReact_Autoload::register();
