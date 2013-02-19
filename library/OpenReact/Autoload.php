@@ -11,7 +11,7 @@
 	obtain it through the world-wide-web, please send an email
 	to openreact-license@react.com so we can send you a copy immediately.
 
-	Copyright (c) 2011 React B.V. (http://www.react.com)
+	Copyright (c) 2012 React B.V. (http://www.react.com)
 */
 /**
 	Simple class autoloading via static methods.
@@ -86,7 +86,7 @@ class OpenReact_Autoload
 	*/
 	public static function autoload($className)
 	{
-		if (strpos($className, 'OpenReact_') !== 0)
+		if (!preg_match('~^OpenReact_[a-zA-Z0-9_]+$~', $classname))
 			return false;
 
 		require (str_replace('_', '/', $className) . '.php');

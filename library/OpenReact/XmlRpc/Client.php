@@ -11,7 +11,7 @@
 	obtain it through the world-wide-web, please send an email
 	to openreact-license@react.com so we can send you a copy immediately.
 
-	Copyright (c) 2011 React B.V. (http://www.react.com)
+	Copyright (c) 2012 React B.V. (http://www.react.com)
 */
 /**
 	PHP based XML-RPC client. Currently only supports UTF-8 as character encoding.
@@ -25,6 +25,11 @@ class OpenReact_XmlRpc_Client
 
 	/** (string) Endpoint URL of the XML-RPC service */
 	protected $_endpoint;
+	/** (string|null) Optional string to append to User-Agent header */
+	protected $_userAgentSuffix;
+	/** (float) Connection and read/write timeout in seconds */
+	protected $_socketTimeout = 3.0;
+
 
 	/**
 		Construct the XML-RPC client.
@@ -35,6 +40,47 @@ class OpenReact_XmlRpc_Client
 	public function __construct($endpoint)
 	{
 		$this->_endpoint = $endpoint;
+	}
+
+	/**
+	 	Set string to append to the User-Agent header of all requests
+
+	 	Parameters:
+	 		suffix - (string) Extra User-Agent contents
+	*/
+	public function setUserAgentSuffix($suffix)
+	{
+		if (is_null($suffix))
+		{
+			$this->_userAgentSuffix = null;
+			return;
+		}
+
+		$this->_userAgentSuffix = trim(str_replace(array("\r", "\n"), '', $suffix));
+	}
+
+	/**
+		Set the connection timeout.
+
+		Parameters:
+	 		timeout - (float) Time in seconds, before a connecting, reading, or writing connection will fail.
+	*/
+	public function setTimeout($timeout)
+	{
+		$this->_socketTimeout = $timeout;
+
+		return $this;
+	}
+
+	/**
+		Get the connection timeout.
+
+		Returns:
+	 		(float) Time in seconds, before a connecting, reading, or writing connection will fail.
+	*/
+	public function getTimeout()
+	{
+		return $this->_socketTimeout;
 	}
 
 	/**
@@ -129,9 +175,13 @@ class OpenReact_XmlRpc_Client
 
 		$body = $methodCall->asXml();
 
+		$userAgent = 'OpenReact-XmlRpcClient/' . self::VERSION;
+		if (isset($this->_userAgentSuffix))
+			$userAgent .= ' ' . $this->_userAgentSuffix;
+
 		$headers = array(
 			'Host' 				=> $endpoint['host'],
-			'User-Agent'		=> 'OpenReact/XmlRpcClient ' . self::VERSION,
+			'User-Agent'		=> $userAgent,
 			'Content-Type'		=> 'text/xml;chartype='. self::ENCODING,
 			'Content-Length' 	=> strlen($body),
 		);
@@ -159,13 +209,22 @@ class OpenReact_XmlRpc_Client
 	{
 		$endpoint = parse_url($this->_endpoint);
 
-		if (!isset($endpoint['port']))
-			$endpoint['port'] = 80;
+		if ($endpoint['scheme'] == 'https' && !in_array('https', stream_get_wrappers()))
+		{
+			throw new OpenReact_XmlRpc_Client_NoHttpsSupportException('Cannot connect to endpoint `%s`: PHP https wrapper not installed. ', array($this->_endpoint));
+		}
 
-		$fp = @fsockopen($endpoint['host'], $endpoint['port'], $errno, $errmsg);
+		if (!isset($endpoint['port']))
+			$endpoint['port'] = ($endpoint['scheme'] == 'https' ? 443 : 80);
+
+		// Timeout here is only during connection
+		$fp = @fsockopen($endpoint['host'], $endpoint['port'], $errno, $errmsg, $this->_socketTimeout);
 
 		if (!$fp)
-			throw new OpenReact_XmlRpc_Client_FailedConnectException('Failed to connect to endpoint `%s`.', array($this->_endpoint));
+			throw new OpenReact_XmlRpc_Client_FailedConnectException('Failed to connect to endpoint `%s`: %s', array($this->_endpoint, isset($errmsg) ? $errmsg : 'Unknown reason.'));
+
+		// Timeout while waiting for writes/reads
+		stream_set_timeout($fp, (int)$this->_socketTimeout, (int)(($this->_socketTimeout % 1) * 1000000));
 
 		fputs($fp, $request);
 
@@ -366,7 +425,8 @@ class OpenReact_XmlRpc_Client
 			case 'double':
 				return (float)$child;
 			case 'boolean':
-				return (boolean)$child;
+				// $child is an object SimpleXmlElement which will 'toString' to '0' / '1', which boolean casts properly
+				return (boolean)(string)$child;
 			case 'base64':
 			case 'dateTime.iso8601':
 			case 'string':
