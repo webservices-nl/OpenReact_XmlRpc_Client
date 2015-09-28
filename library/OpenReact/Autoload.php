@@ -86,7 +86,7 @@ class OpenReact_Autoload
 	*/
 	public static function autoload($className)
 	{
-		if (!preg_match('~^OpenReact_[a-zA-Z0-9_]+$~', $classname))
+		if (!preg_match('~^OpenReact_[a-zA-Z0-9_]+$~', $className))
 			return false;
 
 		require (str_replace('_', '/', $className) . '.php');

@@ -52,7 +52,7 @@ class OpenReact_Exception extends Exception
 	*/
 	public static function autocreate($className)
 	{
-		if (!preg_match('~^OpenReact_[a-zA-Z0-9_]+Exception$~', $classname))
+		if (!preg_match('~^OpenReact_[a-zA-Z0-9_]+Exception$~', $className))
 			return false;
 
 		eval('class ' . $className . ' extends OpenReact_Exception {};');
