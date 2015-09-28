@@ -208,7 +208,6 @@ class OpenReact_XmlRpc_Client
 	protected function _sendRequest($request)
 	{
 		$endpoint = parse_url($this->_endpoint);
-
 		if ($endpoint['scheme'] == 'https' && !in_array('https', stream_get_wrappers()))
 		{
 			throw new OpenReact_XmlRpc_Client_NoHttpsSupportException('Cannot connect to endpoint `%s`: PHP https wrapper not installed. ', array($this->_endpoint));
@@ -216,6 +215,8 @@ class OpenReact_XmlRpc_Client
 
 		if (!isset($endpoint['port']))
 			$endpoint['port'] = ($endpoint['scheme'] == 'https' ? 443 : 80);
+
+		$endpoint['host'] = ($endpoint['scheme'] == 'https' ? 'ssl' : 'tcp') . '://' . $endpoint['host'];
 
 		// Timeout here is only during connection
 		$fp = @fsockopen($endpoint['host'], $endpoint['port'], $errno, $errmsg, $this->_socketTimeout);
